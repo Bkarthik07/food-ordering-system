@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import session from 'express-session'; // Import express-session for session management
 
 const app = express();
-const port = 3000;
+const port =  process.env.DB_PORT;
 
 // Get current directory path (similar to __dirname in CommonJS)
 const __filename = fileURLToPath(import.meta.url);
@@ -13,10 +13,11 @@ const __dirname = path.dirname(__filename);
 
 // Create a connection pool
 const pool = mysql.createPool({
-  host: 'localhost', // Your MySQL server hostname
-  user: 'root', // Your MySQL username
-  password: 'Bk071204@', // Your MySQL password
-  database: 'food', // Your MySQL database name
+  host: process.env.DB_HOST, // Your MySQL server hostname
+  port: process.env.DB_PORT, // Your MySQL username
+  user: process.env.DB_USER, // Your MySQL password
+  password: process.env.DB_PASSWORD , // Your MySQL database name
+  database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
