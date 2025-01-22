@@ -3,6 +3,9 @@ import mysql from 'mysql2';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import session from 'express-session'; // Import express-session for session management
+import dotenv from 'dotenv';
+import fs from 'fs';
+dotenv.config();
 
 const app = express();
 const port =  process.env.DB_PORT;
@@ -18,6 +21,10 @@ const pool = mysql.createPool({
   user: process.env.DB_USER, // Your MySQL password
   password: process.env.DB_PASSWORD , // Your MySQL database name
   database: process.env.DB_NAME,
+  ssl: {
+      ca: fs.readFileSync('isrgrootx1.pem'), // Path to the root certificate file
+  
+    },
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
