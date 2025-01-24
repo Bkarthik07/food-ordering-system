@@ -3,32 +3,37 @@ import mysql from 'mysql2';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import session from 'express-session'; // Import express-session for session management
-import dotenv from 'dotenv';
 import fs from 'fs';
+import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-const port =  process.env.DB_PORT;
+const port = 3000;
 
 // Get current directory path (similar to __dirname in CommonJS)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Create a connection pool
+
+const isProduction = process.env.NODE_ENV === 'production';
+
 const pool = mysql.createPool({
-  host: process.env.DB_HOST, // Your MySQL server hostname
-  port: process.env.DB_PORT, // Your MySQL username
-  user: process.env.DB_USER, // Your MySQL password
-  password: process.env.DB_PASSWORD , // Your MySQL database name
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  ssl: {
-      ca: fs.readFileSync('isrgrootx1.pem'), // Path to the root certificate file
-  
-    },
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  ssl: {
+    ca: fs.readFileSync(path.join(__dirname, 'isrgrootx1.pem')),
+    rejectUnauthorized: true // Ensure certificate is verified
+  }
 });
+
+
+
 
 // Serve static files (index.html, CSS, etc.)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -38,11 +43,16 @@ app.use(express.json());
 
 // Use express-session to manage user sessions
 app.use(session({
-  secret: 'your-secret-key', // Change this to a secure random string
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false } // Set 'secure: true' if using https
+  cookie: {
+    secure: isProduction, // Enforce HTTPS in production
+    sameSite: 'strict' // Prevent CSRF attacks
+  }
 }));
+
+
 
 // Route to log in
 app.post('/api/login', (req, res) => {
