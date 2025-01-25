@@ -15,6 +15,11 @@ app.use(express.json()); // For JSON requests
 app.use(express.urlencoded({ extended: true })); // For URL-encoded requests
 
 app.use(cors());
+app.use(cors({
+  origin: 'https://food-ordering-system-nine.vercel.app/', // Change this to your front-end URL
+  methods: 'GET,POST',
+  credentials: true
+}));
 
 // Get current directory path
 const __filename = fileURLToPath(import.meta.url);
@@ -53,10 +58,12 @@ app.use(session({
   resave: false,
   saveUninitialized: true,
   cookie: {
-    secure: isProduction, // Enforce HTTPS in production
-    sameSite: 'strict' // Prevent CSRF attacks
+    secure: isProduction, // true when using HTTPS
+    httpOnly: true, // To prevent client-side JS access to cookies
+    sameSite: 'strict', // Helps mitigate CSRF attacks
   }
 }));
+
 bcrypt.hash('password123', 10, (err, hash) => {
   if (err) {
     console.error('Error hashing password:', err);
