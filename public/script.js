@@ -36,23 +36,22 @@ async function fetchOrders() {
 }
 
 // Handle login form submission
-document.getElementById('login-form').addEventListener('submit', async (e) => {
-  e.preventDefault();  // Prevent the form from submitting the traditional way
+document.getElementById("login-form").addEventListener("submit", function(event) {
+  event.preventDefault();
 
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
 
-  try {
-    const response = await fetch('http://localhost:3000/api/login', {
-      method: 'POST',
+  fetch("http://localhost:4000/api/login", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+          "Content-Type": "application/json"
       },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const result = await response.json();
-    if (response.ok) {
+      body: JSON.stringify({ email, password })
+  })
+  .then(response => response.json())
+  .then(data => {
+      if (data.message) {
       alert('Login successful!');
       document.getElementById('login-section').style.display = 'none'; // Hide login section
       document.getElementById('auth').style.display = 'none'; // Hide login button
@@ -66,9 +65,8 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     } else {
       alert('Error logging in: ' + result.error);
     }
-  } catch (error) {
-    console.error('Error logging in:', error);
-  }
+  })
+  .catch(error => console.error("Error logging in:", error));
 });
 
 // Handle logout

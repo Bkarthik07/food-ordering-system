@@ -2,46 +2,52 @@ import express from 'express';
 import mysql from 'mysql2';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import session from 'express-session'; // Import express-session for session management
-import fs from 'fs';
+import session from 'express-session';
+import bcrypt from 'bcrypt'; // Import bcrypt for hashed password comparison
 import dotenv from 'dotenv';
+import cors from 'cors';
+
 dotenv.config();
 
 const app = express();
-const port = 3000;
+const port = process.env.DB_PORT;
+app.use(express.json()); // For JSON requests
+app.use(express.urlencoded({ extended: true })); // For URL-encoded requests
 
-// Get current directory path (similar to __dirname in CommonJS)
+app.use(cors());
+
+// Get current directory path
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Create a connection pool
-
 const isProduction = process.env.NODE_ENV === 'production';
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  uri: process.env.DB_CONNECTION_URL,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
-  ssl: {
-    ca: fs.readFileSync(path.join(__dirname, 'isrgrootx1.pem')),
-    rejectUnauthorized: true // Ensure certificate is verified
+  queueLimit: 0
+});
+
+pool.getConnection((err, connection) => {
+  if (err) {
+    console.error('Database connection failed:', err);
+  } else {
+    console.log('Connected to the database');
+    connection.release();
   }
 });
 
+console.log(process.env.DB_CONNECTION_URL);
 
-
-
-// Serve static files (index.html, CSS, etc.)
+// Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Middleware to parse incoming JSON requests
 app.use(express.json());
 
-// Use express-session to manage user sessions
+// Use express-session for session management
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
@@ -51,33 +57,75 @@ app.use(session({
     sameSite: 'strict' // Prevent CSRF attacks
   }
 }));
-
-
+bcrypt.hash('password123', 10, (err, hash) => {
+  if (err) {
+    console.error('Error hashing password:', err);
+  } else {
+    console.log('Hashed password:', hash);
+    // Update this hashed password in your database
+  }
+});
+bcrypt.hash('password123', 10, (err, hash) => {
+  if (err) {
+    console.error('Error hashing password:', err);
+  } else {
+    pool.query(
+      'UPDATE users SET password = ? WHERE email = ?',
+      [hash, 'john.doe@example.com'],
+      (err, result) => {
+        if (err) {
+          console.error('Error updating password:', err);
+        } else {
+          console.log('Password updated successfully for John Doe');
+        }
+      }
+    );
+  }
+});
 
 // Route to log in
 app.post('/api/login', (req, res) => {
+  console.log('Login request body:', req.body); // Debugging log
   const { email, password } = req.body;
 
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
   pool.query(
-    'SELECT * FROM users WHERE email = ? AND password = ?',
-    [email, password],
+    'SELECT * FROM users WHERE email = ?',
+    [email],
     (err, results) => {
       if (err) {
         console.error('Error during login:', err);
         return res.status(500).json({ error: 'Database error' });
       }
-
+      console.log('Query results:', results); // Debugging
       if (results.length > 0) {
-        // Successfully logged in, create a session
-        req.session.user = results[0];
-        res.json({ message: 'Login successful', user: results[0] });
+        const user = results[0];
+        bcrypt.compare(password, user.password, (err, isMatch) => {
+          if (err) {
+            console.error('Error comparing passwords:', err);
+            return res.status(500).json({ error: 'Internal error' });
+          }
+          console.log('Stored hashed password:', user.password); // Debugging
+          console.log('Password comparison result:', isMatch); // Debugging
+          if (isMatch) {
+            req.session.user = user;
+            res.json({ message: 'Login successful', user });
+          } else {
+            res.status(401).json({ error: 'Invalid email or password' });
+          }
+        });
+        
       } else {
         res.status(401).json({ error: 'Invalid email or password' });
       }
     }
   );
-});
+}); 
 
+// Route to log out
 // Route to log out
 app.post('/api/logout', (req, res) => {
   req.session.destroy((err) => {
@@ -170,6 +218,6 @@ app.post('/api/order', (req, res) => {
 });
 
 // Start the server
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+app.listen(process.env.PORT || 3000, () => {
+  console.log(`Server running at http://localhost:${process.env.PORT || 3000}`);
 });
