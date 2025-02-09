@@ -132,7 +132,7 @@ fetchMenuItems();
 // Check if the user is logged in and adjust UI
 async function checkLoginStatus() {
   try {
-    const response = await fetch('http://localhost:3000/api/check-login');
+    const response = await fetch('https://food-ordering-system-nine.vercel.app/api/check-login');
     if (response.ok) {
       const user = await response.json();
       document.getElementById('login-section').style.display = 'none'; // Hide login section
